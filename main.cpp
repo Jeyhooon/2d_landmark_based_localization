@@ -26,22 +26,23 @@ double pdfGaussian(double mu, double sigma, double x)
 
 void updateCurrentEstimate()
 {
+    
+
     // only update the current estimate if there are particles
     if(!particles.empty())
     {
         // use mean values of particles as current estimate
-        double meanX = 0, meanY = 0, meanTheta = 0;
+        double sumX = 0, sumY = 0, sumTheta = 0;
         for (auto& p : particles) {
-            meanX += p.x;
-            meanY += p.y;
-            meanTheta += p.theta;
+            sumX += p.x;
+            sumY += p.y;
+            sumTheta += p.theta;
         }
-        meanX /= particles.size();
-        meanY /= particles.size();
-        meanTheta /= particles.size();
-        currentEstimate.x = meanX;
-        currentEstimate.y = meanY;
-        currentEstimate.theta = meanTheta;
+
+        double numParticles = static_cast<double>(particles.size());
+        currentEstimate.x = sumX/numParticles;
+        currentEstimate.y = sumY/numParticles;
+        currentEstimate.theta = sumTheta/numParticles;
     }
 }
 
