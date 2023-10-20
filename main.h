@@ -6,6 +6,7 @@
 
 // Helper functions declarations
 double pdfGaussian(double mu, double sigma, double x);
+void updateCurrentEstimate();
 
 // Sets current robot position estimate
 void getRobotPositionEstimate(RobotState& estimatePosn);
