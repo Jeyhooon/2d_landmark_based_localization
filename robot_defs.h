@@ -27,6 +27,9 @@ const int ROBOT_RADIUS = 7;
 /* Number of Field Landmarks */
 const int NUM_LANDMARKS = 4;
 
+/* Constants for MCL algorithm */
+const int MAX_NUM_PARTICLES = 50;
+
 /* Robot state */
 struct RobotState 
 {
