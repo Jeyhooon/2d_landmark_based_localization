@@ -5,9 +5,45 @@
 #include <GL/glut.h>
 #include <math.h>
 #include <vector>
+#include <random>
 #include "robot_defs.h"
 #include "controller.h"
 #include "main.h"
+
+// Defining global variables
+RobotState currentEstimate;   // Current robot position estimate
+std::vector<FieldLocation> landmarks; // Global location of each landmark
+std::vector<RobotState> particles;
+static std::default_random_engine randEngine(std::random_device{}());
+std::uniform_real_distribution<double> randRealDist(-1.0, 1.0);
+
+// Helper functions
+double pdfGaussian(double mu, double sigma, double x)
+{
+    // Probability of x for 1-dim Gaussian with mean mu and stddev sigma
+    return exp(-(pow((mu - x), 2)) / (pow(sigma, 2)) / 2.0) / sqrt(2.0 * M_PI * (pow(sigma, 2)));
+}
+
+void updateCurrentEstimate()
+{
+    // only update the current estimate if there are particles
+    if(!particles.empty())
+    {
+        // use mean values of particles as current estimate
+        double meanX = 0, meanY = 0, meanTheta = 0;
+        for (auto& p : particles) {
+            meanX += p.x;
+            meanY += p.y;
+            meanTheta += p.theta;
+        }
+        meanX /= particles.size();
+        meanY /= particles.size();
+        meanTheta /= particles.size();
+        currentEstimate.x = meanX;
+        currentEstimate.y = meanY;
+        currentEstimate.theta = meanTheta;
+    }
+}
 
 /**
  * getRobotPositionEstimate()
@@ -16,11 +52,8 @@
  */
 void getRobotPositionEstimate(RobotState& estimatePosn)
 {
-    // TODO: Write your procedures to set the current robot position estimate here
-    
-//    estimatePosn.x = 0.0;
-//    estimatePosn.y = 0.0;
-//    estimatePosn.theta = 0.0;
+    // Done TODO: Write your procedures to set the current robot position estimate here
+    estimatePosn = currentEstimate;
 }
 
 /**
@@ -32,15 +65,32 @@ void getRobotPositionEstimate(RobotState& estimatePosn)
  */
 void motionUpdate(RobotState delta)
 {
-    // TODO: Write your motion update procedures here
-    
+    // Done TODO: Write your motion update procedures here
+    // first we need to map the change in the local reference-frame into the global reference-frame and then add it to the current estimate
+    double globalDeltaX = delta.x * cos(currentEstimate.theta) - delta.y * sin(currentEstimate.theta);
+    double globalDeltaY = delta.x * sin(currentEstimate.theta) + delta.y * cos(currentEstimate.theta);
+
+    // now we need to update the particles  
+    // (motion noises might already be present in delta values so we don't need to add it here)
+    for (auto& p : particles) {
+        p.x += globalDeltaX;
+        p.y += globalDeltaY;
+        p.theta += delta.theta;
+        
+        // to be sure theta stays in [-pi, pi] interval
+        if (p.theta > M_PI) p.theta -= 2 * M_PI;
+        if (p.theta < -M_PI) p.theta += 2 * M_PI;
+    }
+
+    // finally, updating the current estimate based on the updated particles
+    updateCurrentEstimate();
 }
 
 /**
  * sensorUpdate()
  * This function is called every time the robot detects one or more
  * landmarks in its field of view. The argument passed contains all 
- * marker obervations (marker index and position of marker in robot 
+ * marker observations (marker index and position of marker in robot 
  * coordinates) for the current frame.
  */
 void sensorUpdate(std::vector<MarkerObservation> observations)
@@ -59,7 +109,26 @@ void myinit(RobotState robotState, RobotParams robotParams,
             FieldLocation markerLocations[NUM_LANDMARKS])
 {
     // TODO: Write your initialization procedures here
-    
+    currentEstimate = robotState;
+
+    // pre-allocate memory
+    landmarks.reserve(NUM_LANDMARKS);
+    particles.reserve(MAX_NUM_PARTICLES);
+
+    // store landmarks
+    for (int i = 0; i < NUM_LANDMARKS; i++) {
+        landmarks.push_back(markerLocations[i]);
+    }
+
+    // initialize particles uniformly distributed
+    for (int i = 0; i < MAX_NUM_PARTICLES; i++) {
+        RobotState particle;
+        particle.x = randRealDist(randEngine) * (METERS_PER_PIXEL * (FIELD_LENGTH/2 + FIELD_OFFSET_X));
+        particle.y = randRealDist(randEngine) * (METERS_PER_PIXEL * (FIELD_WIDTH/2 + FIELD_OFFSET_Y));
+        particle.theta = randRealDist(randEngine) * M_PI;
+        particles.push_back(particle);
+    }
+
 }
 
 /**
@@ -69,24 +138,21 @@ void myinit(RobotState robotState, RobotParams robotParams,
  */
 void mydisplay()
 {
-    // TODO: Write your drawing procedures here 
+    // Done TODO: Write your drawing procedures here 
     //       (e.g., robot position uncertainty representation)
     
-    
-//    // Example drawing procedure
-    //int pixelX, pixelY;
-    //double globalX = 1.0, globalY = -1.0;
-    //const int NUM_POINTS = 8;
-    //const double POINT_SPREAD = 0.2;
-    
-    //// Draw cyan colored points at specified global locations on field
-    //glBegin(GL_POINTS);
-    //glColor3f(0.0, 1.0, 1.0);
-    //for(int i=0; i<NUM_POINTS; i++){
-    //    global2pixel(globalX, globalY + (i * POINT_SPREAD), pixelX, pixelY);
-    //    glVertex2i(pixelX, pixelY);
-    //}
-    //glEnd();
+    // Draw Particles as cyan colored points at specified global locations on field
+    // TODO: maybe draw arrows instead of points
+
+    int pixelX, pixelY;
+    glPointSize(5.0);
+    glBegin(GL_POINTS);
+    glColor3f(0.0, 1.0, 1.0);
+    for(const auto& p : particles){
+        global2pixel(p.x, p.y, pixelX, pixelY);
+        glVertex2i(pixelX, pixelY);
+    }
+    glEnd();
 
 }
 
