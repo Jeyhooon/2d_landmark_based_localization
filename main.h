@@ -4,6 +4,9 @@
 #include <vector>
 #include "robot_defs.h"
 
+// Helper functions declarations
+double pdf_gaussian(double mu, double sigma, double x);
+
 // Sets current robot position estimate
 void getRobotPositionEstimate(RobotState& estimatePosn);
 
