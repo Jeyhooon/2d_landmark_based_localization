@@ -30,7 +30,8 @@ const int NUM_LANDMARKS = 4;
 /* Constants for MCL algorithm */
 const int MAX_NUM_PARTICLES = 1000;
 const double RESAMPLING_THRESHOLD = 0.5;
-const double ALPHA = 0.05;
+const double ALPHA = 0.1;
+const double GAMMA = 0.8;   // to smooth the state estimate
 
 /* Robot state */
 struct RobotState 

@@ -83,35 +83,18 @@ void updateCurrentEstimate(RobotState& currentEstimate, std::vector<RobotState>&
     // only update the current estimate if there are particles
     if(!particles.empty())
     {
-        // if (!weights.empty())
-        // {
-        //     // use weights to calculate weighted mean values of particles as current estimate
-        //     double x = 0, y = 0, theta = 0;
-        //     for (int i = 0; i < particles.size(); i++) {
-        //         x += particles[i].x * weights[i];
-        //         y += particles[i].y * weights[i];
-        //         theta += particles[i].theta * weights[i];
-        //     }
-        //     currentEstimate.x = x;
-        //     currentEstimate.y = y;
-        //     currentEstimate.theta = theta;
-        // }
-        // else
-        // {
-            // use mean values of particles as current estimate
-            double sumX = 0, sumY = 0, sumThetaX = 0, sumThetaY = 0;
-            for (auto& p : particles) {
-                sumX += p.x;
-                sumY += p.y;
-                sumThetaX += cos(p.theta);
-                sumThetaY += sin(p.theta);
-            }
+        // use mean values of particles as current estimate
+        double sumX = 0, sumY = 0, sumThetaX = 0, sumThetaY = 0;
+        for (auto& p : particles) {
+            sumX += p.x;
+            sumY += p.y;
+            sumThetaX += cos(p.theta);
+            sumThetaY += sin(p.theta);
+        }
 
-            double numParticles = static_cast<double>(particles.size());
-            currentEstimate.x = sumX/numParticles;
-            currentEstimate.y = sumY/numParticles;
-            currentEstimate.theta = atan2(sumThetaY/numParticles, sumThetaX/numParticles);
-        // }
-
+        double numParticles = static_cast<double>(particles.size());
+        currentEstimate.x = sumX/numParticles*(1 - GAMMA) + currentEstimate.x * GAMMA;
+        currentEstimate.y = sumY/numParticles*(1 - GAMMA) + currentEstimate.y * GAMMA;
+        currentEstimate.theta = atan2(sumThetaY/numParticles, sumThetaX/numParticles)*(1 - GAMMA) + currentEstimate.theta * GAMMA;
     }
 }
