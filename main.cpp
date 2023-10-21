@@ -15,6 +15,12 @@ std::vector<RobotState> particles(MAX_NUM_PARTICLES); // Particles for MCL algor
 std::vector<RobotState> newParticles(MAX_NUM_PARTICLES);
 std::vector<double> weights(MAX_NUM_PARTICLES);       // Importance weights for each particle
 
+std::normal_distribution<double> distRotationFromRotation;
+std::normal_distribution<double> distRotationFromTranslation;
+std::normal_distribution<double> distTranslationFromTranslation;
+std::normal_distribution<double> distTranslationFromRotation;
+
+
 /**
  * getRobotPositionEstimate()
  * This function is called by the controller to retrieve the current 
@@ -36,16 +42,18 @@ void getRobotPositionEstimate(RobotState& estimatePosn)
 void motionUpdate(RobotState delta)
 {
     // Done TODO: Write your motion update procedures here
-    // first we need to map the change in the local reference-frame into the global reference-frame and then add it to the current estimate
-    double globalDeltaX = delta.x * cos(currentEstimate.theta) - delta.y * sin(currentEstimate.theta);
-    double globalDeltaY = delta.x * sin(currentEstimate.theta) + delta.y * cos(currentEstimate.theta);
-
-    // now we need to update the particles  
+    // first we need to map the change in the local reference-frame into the global reference-frame and then add it to each particle
     // (motion noises might already be present in delta values so we don't need to add it here)
-    for (auto& p : particles) {
-        p.x += globalDeltaX;
-        p.y += globalDeltaY;
-        p.theta += delta.theta;
+    for (auto& p : particles) 
+    {
+        // adding noise to delta values
+        double noisyDeltaX = delta.x + distTranslationFromTranslation(randEngine) + distTranslationFromRotation(randEngine);
+        double noisyDeltaY = delta.y + distTranslationFromTranslation(randEngine) + distTranslationFromRotation(randEngine);
+        double noisyDeltaTheta = delta.theta + distRotationFromRotation(randEngine) + distRotationFromTranslation(randEngine);
+
+        p.x += noisyDeltaX * cos(p.theta) - noisyDeltaY * sin(p.theta);
+        p.y += noisyDeltaX * sin(p.theta) + noisyDeltaY * cos(p.theta);
+        p.theta += noisyDeltaTheta;
         
         // to be sure theta stays in [-pi, pi] interval
         if (p.theta > M_PI) p.theta -= 2 * M_PI;
@@ -140,7 +148,7 @@ void sensorUpdate(std::vector<MarkerObservation> observations)
 void myinit(RobotState robotState, RobotParams robotParams, 
             FieldLocation markerLocations[NUM_LANDMARKS])
 {
-    // TODO: Write your initialization procedures here
+    // Done TODO: Write your initialization procedures here
     rParams = robotParams;
     currentEstimate = robotState;
 
@@ -166,8 +174,14 @@ void myinit(RobotState robotState, RobotParams robotParams,
         particles[i] = p;
     }
 
-    // initialize particles using Gaussian distribution around initial position (instead of uniform distribution on the field)
-    // (using the same sensor noise values for initial robot state)
+    // Now initialize the distributions using robotParams
+    distRotationFromRotation.param(std::normal_distribution<>::param_type(0, robotParams.odom_noise_rotation_from_rotation * METERS_PER_PIXEL));
+    distRotationFromTranslation.param(std::normal_distribution<>::param_type(0, robotParams.odom_noise_rotation_from_translation * METERS_PER_PIXEL));
+    distTranslationFromTranslation.param(std::normal_distribution<>::param_type(0, robotParams.odom_noise_translation_from_translation * METERS_PER_PIXEL));
+    distTranslationFromRotation.param(std::normal_distribution<>::param_type(0, robotParams.odom_noise_translation_from_rotation * METERS_PER_PIXEL));
+
+    // // initialize particles using Gaussian distribution around initial position (instead of uniform distribution on the field)
+    // // (using the same sensor noise values for initial robot state)
     // std::normal_distribution<double> gaussX(robotState.x, rParams.sensor_noise_distance);
     // std::normal_distribution<double> gaussY(robotState.y, rParams.sensor_noise_distance);
     // std::normal_distribution<double> gaussTheta(robotState.theta, rParams.sensor_noise_orientation);
