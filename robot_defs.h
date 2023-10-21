@@ -28,7 +28,9 @@ const int ROBOT_RADIUS = 7;
 const int NUM_LANDMARKS = 4;
 
 /* Constants for MCL algorithm */
-const int MAX_NUM_PARTICLES = 50;
+const int MAX_NUM_PARTICLES = 1000;
+const double RESAMPLING_THRESHOLD = 0.5;
+const double ALPHA = 0.05;
 
 /* Robot state */
 struct RobotState 
