@@ -12,15 +12,12 @@ RobotParams rParams;
 RobotState currentEstimate;   // Current robot position estimate
 std::vector<FieldLocation> landmarks(NUM_LANDMARKS);  // Global location of each landmark
 std::vector<RobotState> particles(MAX_NUM_PARTICLES); // Particles for MCL algorithm
-std::vector<RobotState> newParticles(MAX_NUM_PARTICLES);
 std::vector<double> weights(MAX_NUM_PARTICLES);       // Importance weights for each particle
 
 std::normal_distribution<double> distRotationFromRotation;
 std::normal_distribution<double> distRotationFromTranslation;
 std::normal_distribution<double> distTranslationFromTranslation;
 std::normal_distribution<double> distTranslationFromRotation;
-std::normal_distribution<double> resampleNoiseDist(0.0, 0.01);
-std::uniform_real_distribution<double> resampleWheelDist(0, 1.0);
 
 
 /**
@@ -84,49 +81,13 @@ void sensorUpdate(std::vector<MarkerObservation> observations)
         // calculate particle importance weights (normalized) + maxWeight and number of effective particles (Neff)
         double maxWeight = -1;
         double Neff = 0;
-        updateWeights(weights, particles, observations, landmarks, rParams, maxWeight, Neff);
-
-        int N = particles.size();
-        int N_resample = (1 - ALPHA) * N;
-        int N_random = N - N_resample;
+        updateWeights(weights, particles, observations, landmarks, rParams, Neff, maxWeight);
 
         //  if effective number of particles is too low, resample (lack of diversity)
-        if(Neff < RESAMPLING_THRESHOLD * static_cast<double>(N))
+        if(Neff < RESAMPLING_THRESHOLD * static_cast<double>(particles.size()))
         {
-            std::cout << "Resampling..." << std::endl;
-
-            //Resample the particles using Resampling Wheel technique
-            newParticles.clear();
-            
-            double beta = 0;
-            int index = resampleWheelDist(randEngine) * N;
-            for (int i = 0; i < N; i++)
-            {
-                beta += resampleWheelDist(randEngine) * 2 * maxWeight;
-                while(beta > weights[index])
-                {
-                    beta -= weights[index];
-                    index = (index + 1) % N;
-                }
-                RobotState p;
-                p.x = particles[index].x + resampleNoiseDist(randEngine);
-                p.y = particles[index].y + resampleNoiseDist(randEngine);
-                p.theta = particles[index].theta + resampleNoiseDist(randEngine);
-                newParticles.push_back(p);
-            }
-
-            // Add random particles
-            // std::uniform_real_distribution<double> randParticleDist(-1.0, 1.0);
-            // for (int i = 0; i < N_random; ++i) {
-            //     RobotState p;
-            //     p.x = randParticleDist(randEngine) * (METERS_PER_PIXEL * (FIELD_LENGTH/2 + FIELD_OFFSET_X));
-            //     p.y = randParticleDist(randEngine) * (METERS_PER_PIXEL * (FIELD_WIDTH/2 + FIELD_OFFSET_Y));
-            //     p.theta = randParticleDist(randEngine) * M_PI;
-            //     newParticles.push_back(p);
-            // }
-
-            particles = newParticles;
-            weights.clear();
+            resampleParticles(particles, weights, Neff, maxWeight);
+            weights.clear();    // weights are no longer valid after resampling
 
             // finally, updating the current estimate based on the updated particles
             updateCurrentEstimate(currentEstimate, particles, weights);
@@ -150,7 +111,6 @@ void myinit(RobotState robotState, RobotParams robotParams,
     // pre-allocate memory
     landmarks.reserve(NUM_LANDMARKS);
     particles.reserve(MAX_NUM_PARTICLES);
-    newParticles.reserve(MAX_NUM_PARTICLES);
     weights.reserve(MAX_NUM_PARTICLES);
 
     // store landmarks

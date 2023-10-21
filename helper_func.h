@@ -20,9 +20,10 @@ double measurementProbability(RobotState& particle, std::vector<MarkerObservatio
                               std::vector<FieldLocation>& landmarks, RobotParams& rParams);
 
 void updateWeights(std::vector<double>& weights, std::vector<RobotState>& particles, std::vector<MarkerObservation>& observations, 
-                   std::vector<FieldLocation>& landmarks, RobotParams& rParams, double& maxWeight, double& Neff);
+                   std::vector<FieldLocation>& landmarks, RobotParams& rParams, double& Neff, double& maxWeight);
 
 void updateCurrentEstimate(RobotState& currentEstimate, std::vector<RobotState>& particles, std::vector<double>& weights);
 
+void resampleParticles(std::vector<RobotState>& particles, std::vector<double>& weights, double Neff, double maxWeight);
 
 #endif // HELPER_FUNC_H

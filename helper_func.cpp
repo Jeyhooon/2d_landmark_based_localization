@@ -2,6 +2,10 @@
 
 std::random_device rd;
 std::mt19937 randEngine(rd());
+std::vector<RobotState> newParticles(MAX_NUM_PARTICLES);
+std::normal_distribution<double> resampleNoiseDist(0.0, 0.01);
+std::uniform_real_distribution<double> resampleWheelDist(0, 1.0);
+
 
 double gaussianRandom(double mean, double variance)
 {
@@ -48,7 +52,7 @@ double measurementProbability(RobotState& particle, std::vector<MarkerObservatio
 }
 
 void updateWeights(std::vector<double>& weights, std::vector<RobotState>& particles, std::vector<MarkerObservation>& observations, 
-                   std::vector<FieldLocation>& landmarks, RobotParams& rParams, double& maxWeight, double& Neff)
+                   std::vector<FieldLocation>& landmarks, RobotParams& rParams, double& Neff, double& maxWeight)
 {
     // calculate particle importance weights
     weights.clear();
@@ -97,4 +101,45 @@ void updateCurrentEstimate(RobotState& currentEstimate, std::vector<RobotState>&
         currentEstimate.y = sumY/numParticles*(1 - GAMMA) + currentEstimate.y * GAMMA;
         currentEstimate.theta = atan2(sumThetaY/numParticles, sumThetaX/numParticles)*(1 - GAMMA) + currentEstimate.theta * GAMMA;
     }
+}
+
+
+void resampleParticles(std::vector<RobotState>& particles, std::vector<double>& weights, double Neff, double maxWeight)
+{
+    int N = particles.size();
+    int N_resample = (1 - ALPHA) * N;
+    int N_random = N - N_resample;
+    
+    std::cout << "Resampling particles..." << std::endl;
+    //Resample the particles using Resampling Wheel technique
+    newParticles.clear();
+
+    double beta = 0;
+    int index = resampleWheelDist(randEngine) * N;
+    for (int i = 0; i < N; i++)
+    {
+        beta += resampleWheelDist(randEngine) * 2 * maxWeight;
+        while(beta > weights[index])
+        {
+            beta -= weights[index];
+            index = (index + 1) % N;
+        }
+        RobotState p;
+        p.x = particles[index].x + resampleNoiseDist(randEngine);
+        p.y = particles[index].y + resampleNoiseDist(randEngine);
+        p.theta = particles[index].theta + resampleNoiseDist(randEngine);
+        newParticles.push_back(p);
+    }
+
+    // Add random particles
+    // std::uniform_real_distribution<double> randParticleDist(-1.0, 1.0);
+    // for (int i = 0; i < N_random; ++i) {
+    //     RobotState p;
+    //     p.x = randParticleDist(randEngine) * (METERS_PER_PIXEL * (FIELD_LENGTH/2 + FIELD_OFFSET_X));
+    //     p.y = randParticleDist(randEngine) * (METERS_PER_PIXEL * (FIELD_WIDTH/2 + FIELD_OFFSET_Y));
+    //     p.theta = randParticleDist(randEngine) * M_PI;
+    //     newParticles.push_back(p);
+    // }
+
+    particles = newParticles;
 }
