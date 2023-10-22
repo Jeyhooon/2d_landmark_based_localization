@@ -10,20 +10,27 @@
 extern std::random_device rd;
 extern std::mt19937 randEngine;
 
+void clipOrientation(double& theta);
+
 double gaussianRandom(double mean, double variance);
 
 double pdfGaussian(double mu, double sigma, double x);
 
 void globalToRobotFrame(RobotState& robotState, double globalX, double globalY, double& localX, double& localY);
 
-double measurementProbability(RobotState& particle, std::vector<MarkerObservation>& observations, 
+double obsProbability(RobotState& particle, std::vector<MarkerObservation>& observations, 
                               std::vector<FieldLocation>& landmarks, RobotParams& rParams);
 
 void updateWeights(std::vector<double>& weights, std::vector<RobotState>& particles, std::vector<MarkerObservation>& observations, 
                    std::vector<FieldLocation>& landmarks, RobotParams& rParams, double& Neff, double& maxWeight);
 
-void updateCurrentEstimate(RobotState& currentEstimate, std::vector<RobotState>& particles, std::vector<double>& weights);
+void updateCurrentEstimate(RobotState& currentEstimate, std::vector<RobotState>& particles);
 
-void resampleParticles(std::vector<RobotState>& particles, std::vector<double>& weights, double Neff, double maxWeight);
+void resampleParticles(std::vector<RobotState>& particles, std::vector<double>& weights, double maxWeight);
 
-#endif // HELPER_FUNC_H
+void sampleRandomParticles(std::vector<RobotState>& particles, int N);
+
+void sampleCircular(std::vector<MarkerObservation>& observations, std::vector<RobotState>& particles, 
+                     std::vector<FieldLocation>& landmarks, RobotParams& rParams, int N);
+
+#endif
