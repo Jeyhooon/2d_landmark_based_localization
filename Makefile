@@ -1,28 +1,34 @@
 # Localization Challenge
 # Makefile
 
-INCLUDE = -I/usr/include/
-LIBRARIES = controller.a -L/usr/lib/x86_64-linux-gnu/ -lGL -lGLU -lglut -lm -lXi -lXmu
+INCLUDE = -I./include/ -I/usr/include/
+LIBRARIES = ./lib/controller.a -L/usr/lib/x86_64-linux-gnu/ -lGL -lGLU -lglut -lm -lXi -lXmu
 
 COMPILER = g++ --std=c++11
 COMPILERFLAGS = -no-pie $(INCLUDE)
 
 
-PROGRAM =	localization_test
+PROGRAM = localization_test
 
-SOURCE =	main.cpp helper_func.cpp
-HEADERS =	main.h helper_func.h
+SRC_DIR = src
+OBJ_DIR = obj
 
-OBJECT =	main.o helper_func.o
+SOURCES = $(wildcard $(SRC_DIR)/*.cpp)
+HEADERS = $(wildcard ./include/*.cpp)
+OBJECTS = $(SOURCES:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 
+all: directories $(PROGRAM)
 
-.cc.o: $(SOURCE)
-	$(COMPILER) -c $(COMPILERFLAGS) $<
+directories: create-obj-dir
 
-all: $(PROGRAM)
+create-obj-dir: 
+	mkdir -p $(OBJ_DIR)
 
-$(PROGRAM): $(OBJECT) $(SOURCE)
-	$(COMPILER) $(COMPILERFLAGS) -o $(PROGRAM) $(OBJECT) $(LIBRARIES)
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
+	$(COMPILER) -c $(COMPILERFLAGS) $< -o $@
 
-clean:
-	-rm -rf core *.o *~ .*~ $(PROGRAM)
+$(PROGRAM): $(OBJECTS) $(HEADERS)
+	$(COMPILER) $(COMPILERFLAGS) -o $@ $^ $(LIBRARIES)
+
+clean: 
+	-rm -rf $(OBJ_DIR) $(PROGRAM)
