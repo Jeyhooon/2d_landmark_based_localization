@@ -24,6 +24,7 @@
     - [Future Improvements](#future-improvements)
       - [Adaptive Number of Particles](#adaptive-number-of-particles)
       - [Using Better Methods](#using-better-methods)
+      - [Finding better Hyper-Parameters](#finding-better-hyper-parameters)
 
 ## Introduction:
 This challenge is inspired by the international RoboCup competition, where teams of autonomous robots play against each other in the game of soccer.
@@ -165,3 +166,6 @@ Adjust the number of particles in real-time based on the uncertainty in the robo
 
 #### Using Better Methods
 Like using [Mixture-MCL algorithm](https://www.sciencedirect.com/science/article/pii/S0004370201000698?ref=cra_js_challenge&fr=RR-1) which works well with small sample size and recovers faster from robot kidnapping.
+
+#### Finding better Hyper-Parameters
+Tuning hyper-parameters is a very important part of any algorithm. In this project, the hyper-parameters are chosen based on some intuition and trial and error.
