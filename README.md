@@ -89,7 +89,8 @@ You can find the implementation of this part in [src/main.cpp](src/main.cpp) in 
 Based on the movement updates ([&Delta;x, &Delta;y, &Delta;&theta;]) observed from the robot's odometry, the particles are moved accordingly (&Delta; values already include noise from odometry).
 
 To implement it correctly, we need to pay attention that the &Delta; values are the relative change in position of the robot in local robot coordinates. However, the particles are in global coordinates. Therefore, we need to transform the &Delta; values from local to global coordinates before applying them to the particles as shown below:
-<img src="media/Delta_Local_to_Global.jpeg" alt="from local to global translation and rotation" width="500" height="350"/>
+<img src="media/Delta_Local_to_Global.jpeg" alt="from local to global translation and rotation" width="650" height="400"/>
+
 *(first translation, then rotation and also clip &theta; between [-&pi;, &pi;])*
 
 Implementation of this part is in [src/main.cpp](src/main.cpp) in `motionUpdate(...)` function.
@@ -147,7 +148,7 @@ Resampling too much can cause the particles to converge to a single mode and los
 
 It is a measure of the diversity or spread of the particles. It's used to gauge how "informative" the current set of particles is and to decide whether to trigger a resampling step. Can be calculated as:
 
-<img src="media/Neff.png" alt="clever sampling" width="100" height="50"/>
+<img src="media/Neff.png" alt="clever sampling" width="200" height="100"/>
 
 **High Neff**: The particles are well spread out and informative. No need to resample.
 
