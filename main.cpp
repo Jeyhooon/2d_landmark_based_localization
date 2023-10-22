@@ -8,17 +8,12 @@
 #include "main.h"
 
 // Defining global variables
-RobotParams rParams; 
+RobotParams rParams;    // Robot model parameters
 RobotState currentEstimate;   // Current robot position estimate
-std::vector<FieldLocation> landmarks(NUM_LANDMARKS);  // Global location of each landmark
-std::vector<RobotState> particles(MAX_NUM_PARTICLES); // Particles for MCL algorithm
-std::vector<double> weights(MAX_NUM_PARTICLES);       // Importance weights for each particle
-
-std::normal_distribution<double> distRotationFromRotation;
-std::normal_distribution<double> distRotationFromTranslation;
-std::normal_distribution<double> distTranslationFromTranslation;
-std::normal_distribution<double> distTranslationFromRotation;
-
+std::vector<FieldLocation> landmarks(NUM_LANDMARKS);    // Global location of each landmark
+std::vector<RobotState> particles(MAX_NUM_PARTICLES);   // Particles for MCL algorithm
+std::vector<double> weights(MAX_NUM_PARTICLES);         // Importance weights for each particle
+bool isPVisualization = true;   // Flag to toggle particle visualization
 
 /**
  * getRobotPositionEstimate()
@@ -41,26 +36,23 @@ void getRobotPositionEstimate(RobotState& estimatePosn)
 void motionUpdate(RobotState delta)
 {
     // Done TODO: Write your motion update procedures here
-    // first we need to map the change in the local reference-frame into the global reference-frame and then add it to each particle
-    // (motion noises might already be present in delta values so we don't need to add it here)
+    /*
+        first we need to map the change in the local reference-frame into the global reference-frame and then add it to each particle
+        (delta is already noisy, don't need to add noise to it)
+    */ 
+
     for (auto& p : particles) 
     {
-        // adding noise to delta values
-        double noisyDeltaX = delta.x + distTranslationFromTranslation(randEngine) + distTranslationFromRotation(randEngine);
-        double noisyDeltaY = delta.y + distTranslationFromTranslation(randEngine) + distTranslationFromRotation(randEngine);
-        double noisyDeltaTheta = delta.theta + distRotationFromRotation(randEngine) + distRotationFromTranslation(randEngine);
-
-        p.x += noisyDeltaX * cos(p.theta) - noisyDeltaY * sin(p.theta);
-        p.y += noisyDeltaX * sin(p.theta) + noisyDeltaY * cos(p.theta);
-        p.theta += noisyDeltaTheta;
+        p.x += delta.x * cos(p.theta) - delta.y * sin(p.theta);
+        p.y += delta.x * sin(p.theta) + delta.y * cos(p.theta);
+        p.theta += delta.theta;
         
         // to be sure theta stays in [-pi, pi] interval
-        if (p.theta > M_PI) p.theta -= 2 * M_PI;
-        if (p.theta < -M_PI) p.theta += 2 * M_PI;
+        clipOrientation(p.theta);
     }
 
     // finally, updating the current estimate based on the updated particles
-    updateCurrentEstimate(currentEstimate, particles, weights);
+    updateCurrentEstimate(currentEstimate, particles);
 }
 
 /**
@@ -72,27 +64,33 @@ void motionUpdate(RobotState delta)
  */
 void sensorUpdate(std::vector<MarkerObservation> observations)
 {
-    // TODO: Write your sensor update procedures here
-    std::cout << "Landmark index: " << observations[0].markerIndex;
-    std::cout <<" x: " << landmarks[observations[0].markerIndex].x <<  " y: " << landmarks[observations[0].markerIndex].y << std::endl;
+    /*
+        Using Monte Carlo Localization (MCL) algorithm to estimate the robot's state using particles
+    */
+    // Done TODO: Write your sensor update procedures here
+    if (observations.empty() || particles.empty())
+        return;
 
-    if (!observations.empty() && !particles.empty())
+    // calculate particle importance weights (normalized) + maxWeight and number of effective particles (Neff)
+    double maxWeight = -1;
+    double Neff = 0;
+    updateWeights(weights, particles, observations, landmarks, rParams, Neff, maxWeight);
+    double probState = obsProbability(currentEstimate, observations, landmarks, rParams);
+    std::cout << "probState: " << probState << std::endl;
+
+    //  if effective number of particles is too low, resample (lack of diversity)
+    if(Neff < RESAMPLING_THRESHOLD * static_cast<double>(particles.size()))
     {
-        // calculate particle importance weights (normalized) + maxWeight and number of effective particles (Neff)
-        double maxWeight = -1;
-        double Neff = 0;
-        updateWeights(weights, particles, observations, landmarks, rParams, Neff, maxWeight);
+        resampleParticles(particles, weights, maxWeight);
+        if (probState < KIDNAPPED_THRESHOLD)
+            sampleCircular(observations, particles, landmarks, rParams, static_cast<int>(particles.size() * MIN_RAND));
+            
+        // Clear weights as they're invalidated after resampling
+        weights.clear();
 
-        //  if effective number of particles is too low, resample (lack of diversity)
-        if(Neff < RESAMPLING_THRESHOLD * static_cast<double>(particles.size()))
-        {
-            resampleParticles(particles, weights, Neff, maxWeight);
-            weights.clear();    // weights are no longer valid after resampling
-
-            // finally, updating the current estimate based on the updated particles
-            updateCurrentEstimate(currentEstimate, particles, weights);
-        }        
-    }
+        // finally, updating the current estimate based on the updated particles
+        updateCurrentEstimate(currentEstimate, particles);
+    }        
 }
 
 /**
@@ -118,43 +116,33 @@ void myinit(RobotState robotState, RobotParams robotParams,
         landmarks[i] = markerLocations[i];
     }
 
-    // initialize particles uniformly distributed on the field
-    std::uniform_real_distribution<double> randRealDist(-1.0, 1.0);
+    if (INIT_DIST_TYPE == "uniform")
+    {
+        // initialize particles uniformly distributed on the field
+        sampleRandomParticles(particles, MAX_NUM_PARTICLES);
+    }
+    else if (INIT_DIST_TYPE == "gaussian")
+    {
+        // initialize particles using Gaussian distribution around initial position (instead of uniform distribution on the field)
+        // (e.g.: using the same sensor noise values for initial robot state)
+        for (int i = 0; i < MAX_NUM_PARTICLES; i++) {
+            RobotState p;
+            p.x = robotState.x + gaussianRandom(0.0, rParams.sensor_noise_distance);
+            p.y = robotState.y + gaussianRandom(0.0, rParams.sensor_noise_distance);
+            p.theta = robotState.theta + gaussianRandom(0.0, rParams.sensor_noise_orientation);
 
-    for (int i = 0; i < MAX_NUM_PARTICLES; i++) {
-        RobotState p;
-        p.x = randRealDist(randEngine) * (METERS_PER_PIXEL * (FIELD_LENGTH/2 + FIELD_OFFSET_X));
-        p.y = randRealDist(randEngine) * (METERS_PER_PIXEL * (FIELD_WIDTH/2 + FIELD_OFFSET_Y));
-        p.theta = randRealDist(randEngine) * M_PI;
-        particles[i] = p;
+            // Ensure theta stays in [-pi, pi] interval
+            clipOrientation(p.theta);
+            particles[i] = p;
+        }
+    }
+    else
+    {
+        std::cout << "Invalid INIT_DIST_TYPE, using Uniform by default" << std::endl;
+        sampleRandomParticles(particles, MAX_NUM_PARTICLES);
     }
 
-    // Now initialize the distributions using robotParams
-    distRotationFromRotation.param(std::normal_distribution<>::param_type(0, robotParams.odom_noise_rotation_from_rotation * METERS_PER_PIXEL));
-    distRotationFromTranslation.param(std::normal_distribution<>::param_type(0, robotParams.odom_noise_rotation_from_translation * METERS_PER_PIXEL));
-    distTranslationFromTranslation.param(std::normal_distribution<>::param_type(0, robotParams.odom_noise_translation_from_translation * METERS_PER_PIXEL));
-    distTranslationFromRotation.param(std::normal_distribution<>::param_type(0, robotParams.odom_noise_translation_from_rotation * METERS_PER_PIXEL));
-
-    // // initialize particles using Gaussian distribution around initial position (instead of uniform distribution on the field)
-    // // (using the same sensor noise values for initial robot state)
-    // std::normal_distribution<double> gaussX(robotState.x, rParams.sensor_noise_distance);
-    // std::normal_distribution<double> gaussY(robotState.y, rParams.sensor_noise_distance);
-    // std::normal_distribution<double> gaussTheta(robotState.theta, rParams.sensor_noise_orientation);
-
-    // for (int i = 0; i < MAX_NUM_PARTICLES; i++) {
-    //     RobotState p;
-    //     p.x = gaussX(randEngine);
-    //     p.y = gaussY(randEngine);
-    //     p.theta = gaussTheta(randEngine);
-
-    //     // Ensure theta stays in [-pi, pi] interval
-    //     if (p.theta > M_PI) p.theta -= 2 * M_PI;
-    //     if (p.theta < -M_PI) p.theta += 2 * M_PI;
-        
-    //     particles[i] = p;
-    // }
-
-    updateCurrentEstimate(currentEstimate, particles, weights);
+    updateCurrentEstimate(currentEstimate, particles);
 }
 
 /**
@@ -167,18 +155,40 @@ void mydisplay()
     // Done TODO: Write your drawing procedures here 
     //       (e.g., robot position uncertainty representation)
     
-    // Draw Particles as cyan colored points at specified global locations on field
-    // TODO: maybe draw arrows instead of points
+    // Draws Particles as cyan colored points at specified global locations on field
+    // Draws red orientation line for each particle
 
-    int pixelX, pixelY;
-    glPointSize(5.0);
-    glBegin(GL_POINTS);
-    glColor3f(0.0, 1.0, 1.0);
-    for(const auto& p : particles){
-        global2pixel(p.x, p.y, pixelX, pixelY);
-        glVertex2i(pixelX, pixelY);
+    if(isPVisualization)
+    {
+        // Draw the particles
+        int pixelX, pixelY;
+        glPointSize(6.0);
+        glBegin(GL_POINTS);
+        glColor3f(0.0, 1.0, 1.0);
+        for(const auto& p : particles){
+            global2pixel(p.x, p.y, pixelX, pixelY);
+            glVertex2i(pixelX, pixelY);
+        }
+        glEnd();
+
+        // Draw orientation lines for each particle
+        int endPixelX, endPixelY;
+        glColor3f(1.0, 0.0, 0.0);  // Red color for orientation lines
+        glBegin(GL_LINES);
+        for(const auto& p : particles)
+        {
+            double endX = p.x + 4 * METERS_PER_PIXEL * cos(p.theta);
+            double endY = p.y + 4 * METERS_PER_PIXEL * sin(p.theta);
+
+            global2pixel(p.x, p.y, pixelX, pixelY); // start point
+            global2pixel(endX, endY, endPixelX, endPixelY); // end point
+
+            glVertex2i(pixelX, pixelY);
+            glVertex2i(endPixelX, endPixelY);
+        }
+        glEnd();
     }
-    glEnd();
+
 }
 
 /**
@@ -191,7 +201,14 @@ void mydisplay()
  */
 int mykeyboard(unsigned char key)
 {
-    // TODO: (Optional) Write your keyboard input handling procedures here
+    // Done TODO: (Optional) Write your keyboard input handling procedures here
+
+    // by pressing 'p' key, we can toggle the particle visualization
+    if (key == 'p')
+    {
+        isPVisualization = !isPVisualization;
+        return 1;
+    }
 	
 	return 0;
 }
