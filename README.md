@@ -146,10 +146,15 @@ Resampling too much can cause the particles to converge to a single mode and los
 
 It is a measure of the diversity or spread of the particles. It's used to gauge how "informative" the current set of particles is and to decide whether to trigger a resampling step. Can be calculated as:
 
-\[ N_{eff} = \frac{1}{{\sum_{i=1}^{N} (w_i)^2}} \]
+<img src="media/Neff.png" alt="clever sampling" width="100" height="50"/>
 
+**High Neff**: The particles are well spread out and informative. No need to resample.
 
+**Low Neff**: The particles are clustered and not informative. Resample.
 
+**Triggering Resampling**: Resampling is triggered when Neff is less than some threshold (e.g.: N_particles/2).
+
+The implementation can be found in [src/main.cpp](src/main.cpp) in `sensorUpdate(...)` function.
 
 ### Future Improvements
 
