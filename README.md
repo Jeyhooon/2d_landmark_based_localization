@@ -17,7 +17,12 @@
       - [5. Estimation:](#5-estimation)
       - [5. Visualization:](#5-visualization)
     - [Key Decisions](#key-decisions)
+      - [Dealing with Kidnapped Robot Problem](#dealing-with-kidnapped-robot-problem)
+      - [Choosing Hyper-Parameters](#choosing-hyper-parameters)
+      - [Deciding how often to resample](#deciding-how-often-to-resample)
     - [Future Improvements](#future-improvements)
+      - [Adaptive Number of Particles](#adaptive-number-of-particles)
+      - [Using Better Methods](#using-better-methods)
 
 ## Introduction:
 This challenge is inspired by the international RoboCup competition, where teams of autonomous robots play against each other in the game of soccer.
@@ -112,4 +117,44 @@ Implementation of this part is in [src/main.cpp](src/main.cpp) in `motionUpdate(
 
 ### Key Decisions
 
+#### Dealing with Kidnapped Robot Problem
+The *kidnapped robot problem* arises when the robot is physically relocated to an unknown location, causing a drastic mismatch between its estimated position and its actual position. 
+
+To tackle this in MCL algorithm usually some small amount of random particles are added during resampling to make sure we have some particles in the right place. However, this method is not very efficient and can take a long time to recover from the kidnapped robot problem. 
+
+Since the observed landmark is known in this challenge, we can use this information to sample cleverly instead of sampling randomly. The idea is to sample particles around the observed landmark given the observed distance as shown in figure below (in the valid range). 
+
+<img src="media/circular_sampling.png" alt="clever sampling" width="500" height="350"/>
+
+This ensure that the particle filter can maintain multiple modes to represent the likelihood of both the previous belief and the potential new location after the robot is kidnapped.
+
+Moreover, instead of sampling these particles at each resampling step, it's better to check the likelihood of current estimated state. If it's smaller than some threshold, then we can resample around the observed landmark. This way code runs faster and more efficiently.
+
+This method is implemented in [src/helper_func.cpp](src/helper_func.cpp) in `sampleCircular(...)` function.
+
+#### Choosing Hyper-Parameters
+* **Number of Particles**: 
+Chosen based on a balance between computational efficiency and accuracy. More particles generally provide a better representation at the cost of higher computation.
+
+* **Kidnapped Threshold**:
+Chosen based on the accuracy of the robot's state estimation. If the likelihood of the current estimated state is smaller than this threshold, then resample around the observed landmark.
+
+* You can find the rest of the hyper-parameters in [include/robot_defs.h](include/robot_defs.h) under ```/* Parameters for MCL algorithm */```
+
+#### Deciding how often to resample
+Resampling too much can cause the particles to converge to a single mode and lose diversity. On the other hand, resampling too little can cause the particles to diverge and lose accuracy. To find the right balance the concept of **effective number of particles** (Neff) is used.
+
+It is a measure of the diversity or spread of the particles. It's used to gauge how "informative" the current set of particles is and to decide whether to trigger a resampling step. Can be calculated as:
+
+\[ N_{eff} = \frac{1}{{\sum_{i=1}^{N} (w_i)^2}} \]
+
+
+
+
 ### Future Improvements
+
+#### Adaptive Number of Particles
+Adjust the number of particles in real-time based on the uncertainty in the robot's state. During high uncertainty (like after being kidnapped), increase the number of particles, and decrease when the robot's state is more certain.
+
+#### Using Better Methods
+Like using [Mixture-MCL algorithm](https://www.sciencedirect.com/science/article/pii/S0004370201000698?ref=cra_js_challenge&fr=RR-1) which works well with small sample size and recovers faster from robot kidnapping.
