@@ -1,8 +1,9 @@
 # 2D Feature-based Localization Challenge
 
-![change this with gif](media/football.png)
+![localization gif](media/localization_gif.gif)
 
 ## Table of Content
+
 - [2D Feature-based Localization Challenge](#2d-feature-based-localization-challenge)
   - [Table of Content](#table-of-content)
   - [Introduction:](#introduction)
