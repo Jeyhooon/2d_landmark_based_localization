@@ -1,6 +1,6 @@
 # 2D Feature-based Localization Challenge
 
-![localization gif](media/localization_gif.gif)
+<img src="media/localization_gif.gif" alt="localization in action" width="500" height="350"/>
 
 ## Table of Content
 
