@@ -75,7 +75,7 @@ void sensorUpdate(std::vector<MarkerObservation> observations)
     double maxWeight = -1;
     double Neff = 0;
     updateWeights(weights, particles, observations, landmarks, rParams, Neff, maxWeight);
-    double probState = obsProbability(currentEstimate, observations, landmarks, rParams);
+    double probState = obsLikelihood(currentEstimate, observations, landmarks, rParams);
 
     //  if effective number of particles is too low, resample (lack of diversity)
     if(Neff < RESAMPLING_THRESHOLD * static_cast<double>(particles.size()))

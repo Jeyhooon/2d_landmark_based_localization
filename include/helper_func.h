@@ -18,7 +18,7 @@ double pdfGaussian(double mu, double sigma, double x);
 
 void globalToRobotFrame(RobotState& robotState, double globalX, double globalY, double& localX, double& localY);
 
-double obsProbability(RobotState& particle, std::vector<MarkerObservation>& observations, 
+double obsLikelihood(RobotState& particle, std::vector<MarkerObservation>& observations, 
                               std::vector<FieldLocation>& landmarks, RobotParams& rParams);
 
 void updateWeights(std::vector<double>& weights, std::vector<RobotState>& particles, std::vector<MarkerObservation>& observations, 

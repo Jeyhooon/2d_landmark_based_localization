@@ -35,7 +35,7 @@ void globalToRobotFrame(RobotState& robotState, double globalX, double globalY, 
     localY = -(globalX - robotState.x) * sin(robotState.theta) + (globalY - robotState.y) * cos(robotState.theta);
 }
 
-double obsProbability(RobotState& particle, std::vector<MarkerObservation>& observations, 
+double obsLikelihood(RobotState& particle, std::vector<MarkerObservation>& observations, 
                       std::vector<FieldLocation>& landmarks, RobotParams& rParams)
 {
     // Calculates how likely measurements are from particle's perspective
@@ -68,7 +68,7 @@ void updateWeights(std::vector<double>& weights, std::vector<RobotState>& partic
 
     for (int i = 0; i < N; i++)
     {
-        weights.push_back(obsProbability(particles[i], observations, landmarks, rParams));
+        weights.push_back(obsLikelihood(particles[i], observations, landmarks, rParams));
         sumWeights += weights[i];
     }   
 
