@@ -2,6 +2,8 @@
 #ifndef _ROBOT_DEFS_H_
 #define _ROBOT_DEFS_H_
 
+#include <string>
+
 /* Window Dimensions */
 const int WINDOW_WIDTH  = 600;
 const int WINDOW_HEIGHT = 420;
@@ -26,6 +28,15 @@ const int ROBOT_RADIUS = 7;
 
 /* Number of Field Landmarks */
 const int NUM_LANDMARKS = 4;
+
+/* Parameters for MCL algorithm */
+const std::string INIT_DIST_TYPE = "gaussian";  // "uniform" or "gaussian"  initial distribution of particles
+const int MAX_NUM_PARTICLES = 1000;
+const double RESAMPLING_THRESHOLD = 0.7;    // threshold for Neff to trigger resampling
+const double RESAMPLING_NOISE = 0.01;       // to encourage diversity in resampled particles
+const double KIDNAPPED_THRESHOLD = 1e-10;   // to trigger circular sampling when kidnapped
+const double MIN_RAND = 0.01;   // percentage of particles to resample at random (when kidnapped)
+const double GAMMA = 0.8;       // to smooth the state estimate
 
 /* Robot state */
 struct RobotState 

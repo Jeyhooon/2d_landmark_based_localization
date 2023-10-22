@@ -3,6 +3,7 @@
 
 #include <vector>
 #include "robot_defs.h"
+#include "helper_func.h"
 
 // Sets current robot position estimate
 void getRobotPositionEstimate(RobotState& estimatePosn);

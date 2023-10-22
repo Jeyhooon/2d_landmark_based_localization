@@ -10,9 +10,10 @@ COMPILERFLAGS = -no-pie $(INCLUDE)
 
 PROGRAM =	localization_test
 
-SOURCE =	main.cpp main.h 
+SOURCE =	main.cpp helper_func.cpp
+HEADERS =	main.h helper_func.h
 
-OBJECT =	main.o
+OBJECT =	main.o helper_func.o
 
 
 .cc.o: $(SOURCE)
