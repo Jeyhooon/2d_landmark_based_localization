@@ -22,8 +22,8 @@
       - [Choosing Hyper-Parameters](#choosing-hyper-parameters)
       - [Deciding how often to resample](#deciding-how-often-to-resample)
     - [Future Improvements](#future-improvements)
-      - [Adaptive Number of Particles](#adaptive-number-of-particles)
       - [Using Better Methods](#using-better-methods)
+      - [Adaptive Number of Particles](#adaptive-number-of-particles)
       - [Finding better Hyper-Parameters](#finding-better-hyper-parameters)
 
 ## Introduction:
@@ -161,11 +161,13 @@ The implementation can be found in [src/main.cpp](src/main.cpp) in `sensorUpdate
 
 ### Future Improvements
 
+#### Using Better Methods
+Currently due to the single landmark observation which is symmetric, there could be multiple modes that equally likely fits the observation (as shown in previous figure; sampling a circle around the landmark). This can be solved by using better heuristics or methods.
+
+Like using [Mixture-MCL algorithm](https://www.sciencedirect.com/science/article/pii/S0004370201000698?ref=cra_js_challenge&fr=RR-1) which improves upon MCL by working better with small sample size and recovers faster from robot kidnapping (need to do literature review).
+
 #### Adaptive Number of Particles
 Adjust the number of particles in real-time based on the uncertainty in the robot's state. During high uncertainty (like after being kidnapped), increase the number of particles, and decrease when the robot's state is more certain.
-
-#### Using Better Methods
-Like using [Mixture-MCL algorithm](https://www.sciencedirect.com/science/article/pii/S0004370201000698?ref=cra_js_challenge&fr=RR-1) which works well with small sample size and recovers faster from robot kidnapping.
 
 #### Finding better Hyper-Parameters
 Tuning hyper-parameters is a very important part of any algorithm. In this project, the hyper-parameters are chosen based on some intuition and trial and error.
