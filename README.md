@@ -78,7 +78,7 @@ To solve this challenge Monte Carlo Localization (MCL) algorithm is considered w
 
 The algorithm utilizes a set of particles to represent the probable states (positions and orientations) of the robot. Each particle represents a hypothesis about the robot's state, and the set of particles gives a probabilistic representation of the robot's belief about its state.
 ### Method
-The method implementations are mainly done in [src/main.cpp](src/main.cpp) file. The helper functions used in ``main.cpp`` are implemented in [src/helper_func.cpp](src/helper_functions.cpp) file.
+The method implementations are mainly done in [src/main.cpp](src/main.cpp) file. The helper functions used in ``main.cpp`` are implemented in [src/helper_func.cpp](src/helper_func.cpp) file.
 #### 1. Initialization:
 There are two possibilities for Initialization:
 * **initial estimate of state is given**: In this case, the particles are initialized around the given state with a Gaussian distribution.
@@ -97,7 +97,7 @@ To implement it correctly, we need to pay attention that the &Delta; values are 
 Implementation of this part is in [src/main.cpp](src/main.cpp) in `motionUpdate(...)` function.
 
 #### 3. Update:
-* When a landmark observation ([distance, orientation]) is received, the weight of each particle is updated based on how well its predicted observation matches the real observation. The function that calculates how likely the observations are from particle's perspective is implemented in [src/helper_func.cpp](src/helper_functions.cpp) in `obsLikelihood(...)` function.
+* When a landmark observation ([distance, orientation]) is received, the weight of each particle is updated based on how well its predicted observation matches the real observation. The function that calculates how likely the observations are from particle's perspective is implemented in [src/helper_func.cpp](src/helper_func.cpp) in `obsLikelihood(...)` function.
 
 * The weight of a particle increases if its prediction is close to the observation and decreases otherwise. It's important to note that the weight of a particle is not a probability (do not necessarily sum to 1); hence, we do normalize them after calculating them for all the particles. 
   
